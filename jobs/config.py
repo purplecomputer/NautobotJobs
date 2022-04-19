@@ -23,7 +23,7 @@ device_password = os.environ['device_password']
 
 
 device_platform_connection = {
-    "cisco_nxos": {"os": "nxos"},
+    "cisco_nxos": {"os": "nxos_ssh"},
     "cisco_iosxe": {"os": "ios"},
     "cisco_ios" : {"os": "ios"},
     "cisco_xr" : {"os": "iosxr"}
