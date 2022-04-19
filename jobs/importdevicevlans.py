@@ -7,20 +7,25 @@ import napalm
 
 class ImportDeviceVlans(Job):
     '''Class to Import VLANs from a device into a specific Group for Legacy Webair Infra'''
-    vlan_groups = ChoiceVar(
-        description="Group you want to import the device VLANS into",
-        label="VLAN Group",
-        choices=(
-            ("ds120", "DS120"),
-            ("ds121", "DS121"),
-            ("ds180", "DS180")
+    class Meta:
+        name = "Import Device Vlans",
+        description = "Imports Vlans from a specified Device",
+        field_order = ['device', 'vlan_groups']
+
+        vlan_groups = ChoiceVar(
+            description="Group you want to import the device VLANS into",
+            label="VLAN Group",
+            choices=(
+                ("ds120", "DS120"),
+                ("ds121", "DS121"),
+                ("ds180", "DS180")
+            )
         )
-    )
-    device = StringVar(
-        description="Switch or Router you want to pull VLANs from",
-        label="Device",
-        required=True,
-    )
+        device = StringVar(
+            description="Switch or Router you want to pull VLANs from",
+            label="Device",
+            required=True,
+        )
     def __init__(self,device):
         '''Inherits init from Jobs and creates a connection to nautobot and device during instantiation of class'''
         super().__init__()
@@ -41,7 +46,7 @@ class ImportDeviceVlans(Job):
             }
         )
 
-    def getvlans(self):
+    def _getvlans(self):
         '''Queries device info and grabs VLAN'''
         #give me that data
         self.device_init.open()
@@ -99,26 +104,11 @@ class ImportDeviceVlans(Job):
                         'tagged_vlans' : [vidQuery.id]
                     })
 
-    def _linkSVItoImportVlan(self, vidlist):
-        device_interfaces = self.pynb.dcim.interfaces.filter(device_id=self.device.id)
-        for interface in device_interfaces:
-            for vid in vidlist.values():
-                if vid.name in interface.name:
-                    interface.update({
-                        'mode': 'tagged',
-                        'tagged_vlans' : [vid]
-                    })
-
-    def nautobotvlanimport(self, group, vlans):
+    def nautobotvlanimport(self, group):
         '''dumps them vlans into them groups and links it to the SVI created'''
-        # did you give me good data?
-        if not isinstance(vlans, dict):
-            raise ("Vlans is not a dict")
-
+        vlans = self._getvlans()
         # convert the Dict to something thats easier to use here
         vlans_converted = self._formatnapalmvlandict(group, vlans)
-        # pprint.pprint(vlans)
-        # vlangroup = self.pynb.ipam.vlan_groups.get(name=str(group))
 
         for interface, vlan in vlans_converted.items():
             '''query interface object'''
@@ -162,3 +152,9 @@ class ImportDeviceVlans(Job):
         self._linkSVItoImportVlan(group)
 
     def run(self, data, commit):
+        if commit == True:
+            nbjob = ImportDeviceVlans(data['device'])
+            nbjob.nautobotvlanimport(data['vlan_groups'])
+        else:
+            ##Dry RUN if I had the code for it here :^)
+
