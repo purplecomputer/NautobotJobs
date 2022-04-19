@@ -6,6 +6,8 @@ authors = ["Angelo Poggi <angelo.poggi@opti9tech.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
+pynautobot = "^1.0.4"
+python-dotenv = "^0.20.0"
 
 [tool.poetry.dev-dependencies]
 

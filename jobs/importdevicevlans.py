@@ -48,6 +48,12 @@ class ImportDeviceVlans(Job):
         return self.device_init.get_vlans()
 
     def _formatnapalmvlandict(self, group,vlans):
+        '''Lil function that just reverses the dict that napalm gives you back.
+        If the interface is a trunk it will return a list of vlans, if the interface was
+        access, it just give you back that vlan.
+        All Vlans are converted to their proper nautobot id
+        It is also created if it does not exsist
+        '''
         newdict = {}
         #find the group cause you'll need it later
         # Check that group exsists & create it if it dont
@@ -80,16 +86,41 @@ class ImportDeviceVlans(Job):
                     newdict[j] = [vlanid.id]
         return(newdict)
 
-    def nautobotvlanimport(self,group):
+    def _linkSVItoImportVlan(self, group):
+        '''Iterates through the interfaces and tries to link SVI to nautobot VLAN object'''
+        device_interfaces = self.pynb.dcim.interfaces.filter(device_id=self.device.id)
+        for interface in device_interfaces:
+            if 'Vlan' in interface.name:
+                interface_name_strip = interface.name.strip('Vlan')
+                vidQuery = self.pynb.ipam.vlans.get(name=str(interface_name_strip), group=group)
+                if vidQuery is not None:
+                    interface.update({
+                        'mode' : 'tagged',
+                        'tagged_vlans' : [vidQuery.id]
+                    })
+
+    def _linkSVItoImportVlan(self, vidlist):
+        device_interfaces = self.pynb.dcim.interfaces.filter(device_id=self.device.id)
+        for interface in device_interfaces:
+            for vid in vidlist.values():
+                if vid.name in interface.name:
+                    interface.update({
+                        'mode': 'tagged',
+                        'tagged_vlans' : [vid]
+                    })
+
+    def nautobotvlanimport(self, group, vlans):
         '''dumps them vlans into them groups and links it to the SVI created'''
-        #did you give me good data?
+        # did you give me good data?
         if not isinstance(vlans, dict):
-            raise("Vlans is not a dict")
+            raise ("Vlans is not a dict")
 
-        #convert the Dict to something thats easier to use here
-        vlans = self._formatnapalmvlandict(group,vlans)
+        # convert the Dict to something thats easier to use here
+        vlans_converted = self._formatnapalmvlandict(group, vlans)
+        # pprint.pprint(vlans)
+        # vlangroup = self.pynb.ipam.vlan_groups.get(name=str(group))
 
-        for interface,vlan in vlans.items():
+        for interface, vlan in vlans_converted.items():
             '''query interface object'''
             interfaceQuery = self.pynb.dcim.interfaces.get(
                 name=str(interface),
@@ -105,14 +136,14 @@ class ImportDeviceVlans(Job):
                     set the interface as access'''
                     print('setting int as untagged')
                     interface.update({
-                        'mode' : 'access',
-                        'untagged_vlan' : vlan[0]
+                        'mode':          'access',
+                        'untagged_vlan': vlan[0]
                     })
-                elif interfaceQuery.untagged_vlan is None:
+                elif interfaceQuery.mode.value == 'access' and interfaceQuery.untagged_vlan is None:
                     '''if the interfaceQuery exsists and was set untagged by network importer w/ no vlans'''
                     print('linking vlan to untagged int')
                     interfaceQuery.update({
-                        'untagged_vlan' :  vlan[0]
+                        'untagged_vlan': vlan[0]
                     })
                 else:
                     '''if logic doesnt match just set the mode to access and link VLAN'''
@@ -124,9 +155,10 @@ class ImportDeviceVlans(Job):
             else:
                 '''If vlan dict value list is longer than 1'''
                 interfaceQuery.update({
-                    'mode' : 'tagged',
-                    'tagged_vlans' : vlan
+                    'mode':         'tagged',
+                    'tagged_vlans': vlan
                 })
+        '''Once VLANs are imported - Link SVIs using original dict from Napalm'''
+        self._linkSVItoImportVlan(group)
 
     def run(self, data, commit):
-
