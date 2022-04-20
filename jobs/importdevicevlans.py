@@ -29,9 +29,16 @@ class ImportDeviceVlans(Job):
     def __init__(self,device):
         '''Inherits init from Jobs and creates a connection to nautobot and device during instantiation of class'''
         super().__init__()
-        self.pynb = pynautobot.api(nautobot_url, token=nautobot_token)
+        #self.pynb = pynautobot.api(nautobot_url, token=nautobot_token)
         try:
-            self.device = self.pynb.dcim.devices.get(name=str(device))
+            #self.device = self.pynb.dcim.devices.get(name=str(device))
+            #Native DJango unchained ORM
+            self.device = Device.objects.get(name=str(device))
+            #get username and password
+            self.username = Secret.objects.get(name='device-username')
+            self.username = self.username.parameters['variable']
+            self.password = Secret.objcets.get(name='device-password')
+            self.password = self.password.parameters['variable']
         except Exception as e:
             raise Exception(e)
         #grab the platform to find the driver
@@ -39,10 +46,10 @@ class ImportDeviceVlans(Job):
         self.driver = napalm.get_network_driver(self.device_os)
         self.device_init = self.driver(
             hostname=str(self.device.name),
-            username=str(device_username),
-            password=str(device_password),
+            username=str(self.username),
+            password=str(self.password),
             optional_args={
-                'secret': str(device_password)
+                'secret': str(self.password)
             }
         )
 
@@ -62,20 +69,23 @@ class ImportDeviceVlans(Job):
         newdict = {}
         #find the group cause you'll need it later
         # Check that group exsists & create it if it dont
-        vlangroup = self.pynb.ipam.vlan_groups.get(name=str(group))
+        #vlangroup = self.pynb.ipam.vlan_groups.get(name=str(group))
+        vlangroup = VLANGroup.objects.get(name=str(group))
         if vlangroup is None:
-            vlangroup = self.pynb.ipam.vlan_groups.create(
-                name=str(group)
+            vlangroup = VLANGroup(
+                name=str(group),
+                site=self.device.site
             )
+            vlangroup.validated_save()
         if not isinstance(vlans, dict):
             raise Exception("vlan arg must be a dictionary")
         for k, v in vlans.items():
-            vlanid = self.pynb.ipam.vlans.get(
+            vlanid = VLAN.objects.get(
                 vid=str(k),
                 vlan_group=vlangroup.id
             )
             if vlanid is None:
-                vlanid = self.pynb.ipam.vlans.create(
+                vlanid = VLAN(
                     name=str(k),
                     vid=k,
                     group=str(vlangroup.id),
@@ -83,6 +93,7 @@ class ImportDeviceVlans(Job):
                     status='active',
                     description=j['name']
                 )
+                vlanid.validated_save()
             for j in v['interfaces']:
                 if j in newdict:
                     #if the key is already there add the vlan
@@ -93,16 +104,17 @@ class ImportDeviceVlans(Job):
 
     def _linkSVItoImportVlan(self, group):
         '''Iterates through the interfaces and tries to link SVI to nautobot VLAN object'''
-        device_interfaces = self.pynb.dcim.interfaces.filter(device_id=self.device.id)
+        device_interfaces = Interface.objects.filter(device_id=self.device.id)
         for interface in device_interfaces:
             if 'Vlan' in interface.name:
                 interface_name_strip = interface.name.strip('Vlan')
-                vidQuery = self.pynb.ipam.vlans.get(name=str(interface_name_strip), group=group)
+                vidQuery = VLAN.objects.get(name=str(interface_name_strip), group=group)
                 if vidQuery is not None:
-                    interface.update({
-                        'mode' : 'tagged',
-                        'tagged_vlans' : [vidQuery.id]
-                    })
+                    interface(
+                        mode='tagged',
+                        tagged_vlans=[vidQuery.id]
+                    )
+                    interface.validated_save()
 
     def nautobotvlanimport(self, group):
         '''dumps them vlans into them groups and links it to the SVI created'''
@@ -112,7 +124,7 @@ class ImportDeviceVlans(Job):
 
         for interface, vlan in vlans_converted.items():
             '''query interface object'''
-            interfaceQuery = self.pynb.dcim.interfaces.get(
+            interfaceQuery = Interface.objects.get(
                 name=str(interface),
                 device_id=self.device.id
             )
@@ -120,34 +132,23 @@ class ImportDeviceVlans(Job):
                 print(f'Interface: {interface} does not match SOT list - Skipping!')
                 continue
             if len(vlan) == 1:
-                if interfaceQuery.mode.value == None:
+                if interfaceQuery.mode == None:
                     '''if the interface exsist but has no vlans or mode set
                     update and link curent vlan to vlan we are
                     set the interface as access'''
                     print('setting int as untagged')
-                    interface.update({
-                        'mode':          'access',
-                        'untagged_vlan': vlan[0]
-                    })
-                elif interfaceQuery.mode.value == 'access' and interfaceQuery.untagged_vlan is None:
-                    '''if the interfaceQuery exsists and was set untagged by network importer w/ no vlans'''
-                    print('linking vlan to untagged int')
-                    interfaceQuery.update({
-                        'untagged_vlan': vlan[0]
-                    })
-                else:
-                    '''if logic doesnt match just set the mode to access and link VLAN'''
-                    print('nothing matches, setting as access w/ ID')
-                    interfaceQuery.update({
-                        'mode':          'access',
-                        'untagged_vlan': vlan[0]
-                    })
+                    interfaceQuery(
+                        mode='access',
+                        untagged_vlan=vlan[0]
+                    )
+                    interfaceQuery.validated_save()
             else:
                 '''If vlan dict value list is longer than 1'''
-                interfaceQuery.update({
-                    'mode':         'tagged',
-                    'tagged_vlans': vlan
-                })
+                interfaceQuery(
+                    mode='tagged',
+                    tagged_vlans=vlan
+                )
+                interfaceQuery.validated_save()
         '''Once VLANs are imported - Link SVIs using original dict from Napalm'''
         self._linkSVItoImportVlan(group)
 
@@ -156,5 +157,5 @@ class ImportDeviceVlans(Job):
             nbjob = ImportDeviceVlans(data['device'])
             nbjob.nautobotvlanimport(data['vlan_groups'])
         else:
-            ##Dry RUN if I had the code for it here :^)
+            pass
 
