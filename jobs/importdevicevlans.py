@@ -24,7 +24,7 @@ class ImportDeviceVlans(Job):
             label="Device",
             required=True,
         )
-    def __init__(self,device):
+    def __init__(self,data):
         '''Inherits init from Jobs and creates a connection to nautobot and device during instantiation of class'''
         super().__init__()
         self.device_platform_connection = {
@@ -37,7 +37,7 @@ class ImportDeviceVlans(Job):
         try:
             #self.device = self.pynb.dcim.devices.get(name=str(device))
             #Native DJango unchained ORM
-            self.device = Device.objects.get(name=str(device))
+            self.device = Device.objects.get(name=str(data['device']))
             #get username and password
             self.username = Secret.objects.get(name='device-username')
             self.username = self.username.parameters['variable']
