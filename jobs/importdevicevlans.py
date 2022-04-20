@@ -29,6 +29,12 @@ class ImportDeviceVlans(Job):
     def __init__(self,device):
         '''Inherits init from Jobs and creates a connection to nautobot and device during instantiation of class'''
         super().__init__()
+        self.device_platform_connection = {
+            "cisco_nxos":  {"os": "nxos_ssh"},
+            "cisco_iosxe": {"os": "ios"},
+            "cisco_ios":   {"os": "ios"},
+            "cisco_xr":    {"os": "iosxr"}
+        }
         #self.pynb = pynautobot.api(nautobot_url, token=nautobot_token)
         try:
             #self.device = self.pynb.dcim.devices.get(name=str(device))
@@ -42,7 +48,7 @@ class ImportDeviceVlans(Job):
         except Exception as e:
             raise Exception(e)
         #grab the platform to find the driver
-        self.device_os = device_platform_connection[str(self.device.platform)]['os']
+        self.device_os = self.device_platform_connection[str(self.device.platform)]['os']
         self.driver = napalm.get_network_driver(self.device_os)
         self.device_init = self.driver(
             hostname=str(self.device.name),
