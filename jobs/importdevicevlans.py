@@ -28,7 +28,7 @@ class ImportDeviceVlans(Job):
         label="Device",
         required=True,
     )
-    def __init__(self,selected_device):
+    def __init__(self,):
         '''Inherits init from Jobs and creates a connection to nautobot and device during instantiation of class'''
         super().__init__()
         self.device_platform_connection = {
@@ -37,35 +37,32 @@ class ImportDeviceVlans(Job):
             "cisco_ios":   {"os": "ios"},
             "cisco_xr":    {"os": "iosxr"}
         }
-        #self.pynb = pynautobot.api(nautobot_url, token=nautobot_token)
-        try:
-            #self.device = self.pynb.dcim.devices.get(name=str(device))
-            #Native DJango unchained ORM
-            self.device = Device.objects.get(name=str(selected_device))
-            #get username and password
-            self.username = Secret.objects.get(name='device-username')
-            self.username = self.username.parameters['variable']
-            self.password = Secret.objcets.get(name='device-password')
-            self.password = self.password.parameters['variable']
-        except Exception as e:
-            raise Exception(e)
-        #grab the platform to find the driver
-        self.device_os = self.device_platform_connection[str(self.device.platform)]['os']
-        self.driver = napalm.get_network_driver(self.device_os)
-        self.device_init = self.driver(
-            hostname=str(self.device.name),
-            username=str(self.username),
-            password=str(self.password),
+    def _connecttodevice(self,selected_device):
+        device = Device.objects.get(name=str(selected_device['device']))
+        # get username and password
+        username = Secret.objects.get(name='device-username')
+        username = username.parameters['variable']
+        
+        password = Secret.objcets.get(name='device-password')
+        password = password.parameters['variable']
+        device_os = self.device_platform_connection[str(self.device.platform)]['os']
+        driver = napalm.get_network_driver(device_os)
+        device_init = driver(
+            hostname=str(device.name),
+            username=str(username),
+            password=str(password),
             optional_args={
-                'secret': str(self.password)
+                'secret': str(password)
             }
         )
-
-    def _getvlans(self):
+        return device_init
+         
+    def _getvlans(self,device):
         '''Queries device info and grabs VLAN'''
         #give me that data
-        self.device_init.open()
-        return self.device_init.get_vlans()
+        device_init = self._connecttodevice(selected_device=device)
+        device_init.open()
+        return device_init.get_vlans()
 
     def _formatnapalmvlandict(self, group,vlans):
         '''Lil function that just reverses the dict that napalm gives you back.
@@ -110,9 +107,10 @@ class ImportDeviceVlans(Job):
                     newdict[j] = [vlanid.id]
         return(newdict)
 
-    def _linkSVItoImportVlan(self, group):
+    def _linkSVItoImportVlan(self, device,group):
         '''Iterates through the interfaces and tries to link SVI to nautobot VLAN object'''
-        device_interfaces = Interface.objects.filter(device_id=self.device.id)
+        device = Device.objects.get(name=device)
+        device_interfaces = Interface.objects.filter(device_id=device.id)
         for interface in device_interfaces:
             if 'Vlan' in interface.name:
                 interface_name_strip = interface.name.strip('Vlan')
@@ -124,9 +122,9 @@ class ImportDeviceVlans(Job):
                     )
                     interface.validated_save()
 
-    def nautobotvlanimport(self, group):
+    def nautobotvlanimport(self, device, group):
         '''dumps them vlans into them groups and links it to the SVI created'''
-        vlans = self._getvlans()
+        vlans = self._getvlans(device)
         # convert the Dict to something thats easier to use here
         vlans_converted = self._formatnapalmvlandict(group, vlans)
 
@@ -158,12 +156,12 @@ class ImportDeviceVlans(Job):
                 )
                 interfaceQuery.validated_save()
         '''Once VLANs are imported - Link SVIs using original dict from Napalm'''
-        self._linkSVItoImportVlan(group)
+        self._linkSVItoImportVlan(device,group)
 
     def run(self, data, commit):
         if commit == True:
-            nbjob = ImportDeviceVlans(data['device'])
-            nbjob.nautobotvlanimport(data['vlan_groups'])
+            nbjob = ImportDeviceVlans()
+            nbjob.nautobotvlanimport(data['selected_device'], data['vlan_groups'])
         else:
             pass
 
