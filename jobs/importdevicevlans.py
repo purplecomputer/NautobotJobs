@@ -40,11 +40,8 @@ class ImportDeviceVlans(Job):
     def _connecttodevice(self,selected_device):
         device = Device.objects.get(name=str(selected_device['device']))
         # get username and password
-        username = Secret.objects.get(name='device-username')
-        username = username.parameters['variable']
-        
-        password = Secret.objcets.get(name='device-password')
-        password = password.parameters['variable']
+        username = Secret.objects.get(name='device-username').get_value()
+        password = Secret.objcets.get(name='device-password').get_value()
         device_os = self.device_platform_connection[str(self.device.platform)]['os']
         driver = napalm.get_network_driver(device_os)
         device_init = driver(
