@@ -14,21 +14,21 @@ class ImportDeviceVlans(Job):
         description = "Imports Vlans from a specified Device",
         field_order = ['device', 'vlan_groups']
 
-    vlan_groups = ChoiceVar(
-        description="Group you want to import the device VLANS into",
-        label="VLAN Group",
-        choices=(
-            ("ds120", "DS120"),
-            ("ds121", "DS121"),
-            ("ds180", "DS180")
+        vlan_groups = ChoiceVar(
+            description="Group you want to import the device VLANS into",
+            label="VLAN Group",
+            choices=(
+                ("ds120", "DS120"),
+                ("ds121", "DS121"),
+                ("ds180", "DS180")
+            )
         )
-    )
-    selected_device = StringVar(
-        description="Switch or Router you want to pull VLANs from",
-        label="Device",
-        required=True,
-    )
-    def __init__(self,):
+        selected_device = StringVar(
+            description="Switch or Router you want to pull VLANs from",
+            label="Device",
+            required=True,
+        )
+    def __init__(self):
         '''Inherits init from Jobs and creates a connection to nautobot and device during instantiation of class'''
         super().__init__()
         self.device_platform_connection = {
