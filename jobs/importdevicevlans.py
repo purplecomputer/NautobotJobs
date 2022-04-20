@@ -28,7 +28,7 @@ class ImportDeviceVlans(Job):
             label="Device",
             required=True,
         )
-    def __init__(self,):
+    def __init__(self,data):
         '''Inherits init from Jobs and creates a connection to nautobot and device during instantiation of class'''
         super().__init__()
         self.device_platform_connection = {
