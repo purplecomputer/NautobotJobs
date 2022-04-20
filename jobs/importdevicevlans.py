@@ -39,7 +39,7 @@ class ImportDeviceVlans(Job):
             "cisco_xr":    {"os": "iosxr"}
         }
     def _connecttodevice(self,selected_device):
-        device = Device.objects.get(name=str(selected_device['device']))
+        device = Device.objects.get(name=selected_device)
         # get username and password
         username = Secret.objects.get(name='device-username').get_value()
         password = Secret.objcets.get(name='device-password').get_value()
