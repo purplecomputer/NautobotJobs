@@ -1,6 +1,6 @@
 #Angelo.Poggi
 
-from nautobot.extras.jobs import Job
+from nautobot.extras.jobs import Job, ChoiceVar, StringVar
 import napalm
 
 class ImportDeviceVlans(Job):
