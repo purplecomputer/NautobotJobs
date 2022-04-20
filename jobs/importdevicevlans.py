@@ -9,10 +9,10 @@ import napalm
 
 class ImportDeviceVlans(Job):
     '''Class to Import VLANs from a device into a specific Group for Legacy Webair Infra'''
-    class Meta:
-        name = "Import Device Vlans",
-        description = "Imports Vlans from a specified Device",
-        field_order = ['device', 'vlan_groups']
+    # class Meta:
+    #     name = "Import Device Vlans",
+    #     description = "Imports Vlans from a specified Device",
+    #     field_order = ['device', 'vlan_groups']
 
     vlan_groups = ChoiceVar(
         description="Group you want to import the device VLANS into",
