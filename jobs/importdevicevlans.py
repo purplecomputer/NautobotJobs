@@ -1,8 +1,6 @@
 #Angelo.Poggi
 
-from config import nautobot_url, nautobot_token, device_platform_connection,device_username,device_password
 from nautobot.extras.jobs import Job
-import pynautobot
 import napalm
 
 class ImportDeviceVlans(Job):
