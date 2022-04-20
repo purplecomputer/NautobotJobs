@@ -1,6 +1,6 @@
 #Angelo.Poggi
 
-from nautobot.extras.jobs import Job, ChoiceVar, StringVar
+from nautobot.extras.jobs import Job, ChoiceVar, ObjectVar
 from nautobot.dcim.models import Device, Interface
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.extras.models import Secret
@@ -23,10 +23,11 @@ class ImportDeviceVlans(Job):
             ("ds180", "DS180")
         )
     )
-    selected_device = StringVar(
-        description="Switch or Router you want to pull VLANs from",
-        label="Device",
-        required=True,
+    selected_device = ObjectVar(
+        model=Device,
+        query_params={
+            'status':'active'
+        }
     )
     def __init__(self):
         '''Inherits init from Jobs and creates a connection to nautobot and device during instantiation of class'''
