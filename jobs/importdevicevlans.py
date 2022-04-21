@@ -2,7 +2,7 @@
 
 from nautobot.extras.jobs import Job, ChoiceVar, ObjectVar
 from nautobot.dcim.models import Device, Interface
-from nautobot.ipam.models import VLAN, VLANGroup, DoesNotExsist
+from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.extras.models import Secret
 
 
