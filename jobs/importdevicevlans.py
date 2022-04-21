@@ -85,7 +85,7 @@ class ImportDeviceVlans(Job):
         for k, v in vlans.items():
             vlanid = VLAN.objects.get(
                 vid=str(k),
-                vlan_group=vlangroup.id
+                group_id=vlangroup.id
             )
             if vlanid is None:
                 vlanid = VLAN(
