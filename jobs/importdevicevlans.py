@@ -118,14 +118,13 @@ class ImportDeviceVlans(Job):
         for interface in device_interfaces:
             if 'Vlan' in interface.name:
                 interface_name_strip = interface.name.strip('Vlan')
-                vidQuery = VLAN.objects.get(name=str(interface_name_strip), group_id=vlan_group.id)
-                if vidQuery is not None:
-                    interface(
-                        mode='tagged',
-                        tagged_vlans=[vidQuery.id]
-                    )
+                try:
+                    vidQuery = VLAN.objects.get(name=str(interface_name_strip), group_id=vlan_group.id)
+                    interface.mode='tagged'
+                    interface.tagged_vlans = [vidQuery.id]
                     interface.validated_save()
-
+                except:
+                    continue
     def nautobotvlanimport(self, device, group):
         '''dumps them vlans into them groups and links it to the SVI created'''
         vlans = self._getvlans(device)
