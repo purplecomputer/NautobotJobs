@@ -2,8 +2,9 @@
 
 from nautobot.extras.jobs import Job, ChoiceVar, ObjectVar
 from nautobot.dcim.models import Device, Interface
-from nautobot.ipam.models import VLAN, VLANGroup
+from nautobot.ipam.models import VLAN, VLANGroup, DoesNotExsist
 from nautobot.extras.models import Secret
+
 
 import napalm
 
@@ -73,28 +74,30 @@ class ImportDeviceVlans(Job):
         #find the group cause you'll need it later
         # Check that group exsists & create it if it dont
         #vlangroup = self.pynb.ipam.vlan_groups.get(name=str(group))
-        vlangroup = VLANGroup.objects.get(name=str(group))
-        if vlangroup is None:
-            vlangroup = VLANGroup(
-                name=str(group),
-                site=self.device.site
-            )
-            vlangroup.validated_save()
+        try:
+            vlangroup = VLANGroup.objects.get(name=str(group))
+        except:
+                vlangroup = VLANGroup(
+                    name=str(group),
+                    site=self.device.site
+                )
+                vlangroup.validated_save()
         if not isinstance(vlans, dict):
             raise Exception("vlan arg must be a dictionary")
         for k, v in vlans.items():
-            vlanid = VLAN.objects.get(
-                vid=str(k),
-                group_id=vlangroup.id
-            )
-            if vlanid is None:
+            try:
+                vlanid = VLAN.objects.get(
+                    vid=str(k),
+                    group_id=vlangroup.id
+                )
+            except:
                 vlanid = VLAN(
                     name=str(k),
                     vid=k,
-                    group=str(vlangroup.id),
+                    group_id=str(vlangroup.id),
                     site=self.device.site.id,
                     status='active',
-                    description=j['name']
+                    #description=j.get(['name'], k)
                 )
                 vlanid.validated_save()
             for j in v['interfaces']:
@@ -128,11 +131,12 @@ class ImportDeviceVlans(Job):
 
         for interface, vlan in vlans_converted.items():
             '''query interface object'''
-            interfaceQuery = Interface.objects.get(
-                name=str(interface),
-                device_id=self.device.id
-            )
-            if interfaceQuery is None:
+            try:
+                interfaceQuery = Interface.objects.get(
+                    name=str(interface),
+                    device_id=self.device.id
+                )
+            except:
                 print(f'Interface: {interface} does not match SOT list - Skipping!')
                 continue
             if len(vlan) == 1:
