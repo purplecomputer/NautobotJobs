@@ -39,6 +39,7 @@ class ImportDeviceVlans(Job):
             "cisco_ios":   {"os": "ios"},
             "cisco_xr":    {"os": "iosxr"}
         }
+        self.active_status = '1f272eaa-a624-4078-9359-8966e56c16cf'
     def _connecttodevice(self,selected_device):
         device = Device.objects.get(name=selected_device)
         # get username and password
@@ -97,7 +98,7 @@ class ImportDeviceVlans(Job):
                     vid=k,
                     group_id=str(vlangroup.id),
                     site_id=device.site.id,
-                    status='active',
+                    status_id=self.active_status,
                     #description=j.get(['name'], k)
                 )
                 vlanid.validated_save()
