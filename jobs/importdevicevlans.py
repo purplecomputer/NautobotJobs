@@ -130,6 +130,7 @@ class ImportDeviceVlans(Job):
     def nautobotvlanimport(self, device, group):
         '''dumps them vlans into them groups and links it to the SVI created'''
         vlans = self._getvlans(device)
+        device = Device.objects.get(name=device)
         # convert the Dict to something thats easier to use here
         vlans_converted = self._formatnapalmvlandict(device,group, vlans)
 
@@ -138,7 +139,7 @@ class ImportDeviceVlans(Job):
             try:
                 interfaceQuery = Interface.objects.get(
                     name=str(interface),
-                    device_id=self.device.id
+                    device_id=device.id
                 )
             except:
                 self.log_debug(f'Interface: {interface} does not match SOT list - Skipping!')
