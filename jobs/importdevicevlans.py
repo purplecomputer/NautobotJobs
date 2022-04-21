@@ -118,12 +118,14 @@ class ImportDeviceVlans(Job):
         for interface in device_interfaces:
             if 'Vlan' in interface.name:
                 interface_name_strip = interface.name.strip('Vlan')
+                self.log_debug(f"Found SVI interface, trying to link its VLAN")
                 try:
                     vidQuery = VLAN.objects.get(name=str(interface_name_strip), group_id=vlan_group.id)
                     interface.mode='tagged'
                     interface.tagged_vlans = [vidQuery.id]
                     interface.validated_save()
                 except:
+                    self.log_debug(f"Could not Link vlan on {interface.name}")
                     continue
     def nautobotvlanimport(self, device, group):
         '''dumps them vlans into them groups and links it to the SVI created'''
@@ -139,14 +141,14 @@ class ImportDeviceVlans(Job):
                     device_id=self.device.id
                 )
             except:
-                print(f'Interface: {interface} does not match SOT list - Skipping!')
+                self.log_debug(f'Interface: {interface} does not match SOT list - Skipping!')
                 continue
             if len(vlan) == 1:
                 if interfaceQuery.mode == None:
                     '''if the interface exsist but has no vlans or mode set
                     update and link curent vlan to vlan we are
                     set the interface as access'''
-                    print('setting int as untagged')
+                    self.log_debut(f'setting int as untagged on {interfaceQuery.name}')
                     interfaceQuery(
                         mode='access',
                         untagged_vlan=vlan[0]
@@ -154,10 +156,9 @@ class ImportDeviceVlans(Job):
                     interfaceQuery.validated_save()
             else:
                 '''If vlan dict value list is longer than 1'''
-                interfaceQuery(
-                    mode='tagged',
-                    tagged_vlans=vlan
-                )
+                self.log_debug(f"setting int as tagged on {interfaceQuery.name}")
+                interfaceQuery.mode='tagged'
+                interface.tagged_vlans=vlan
                 interfaceQuery.validated_save()
         '''Once VLANs are imported - Link SVIs using original dict from Napalm'''
         self._linkSVItoImportVlan(device,group)
