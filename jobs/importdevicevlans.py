@@ -118,14 +118,14 @@ class ImportDeviceVlans(Job):
         for interface in device_interfaces:
             if 'Vlan' in interface.name:
                 interface_name_strip = interface.name.strip('Vlan')
-                self.log_debug(f"Found SVI interface, trying to link its VLAN")
+                print(f"Found SVI interface, trying to link its VLAN")
                 try:
                     vidQuery = VLAN.objects.get(name=str(interface_name_strip), group_id=vlan_group.id)
                     interface.mode='tagged'
                     interface.tagged_vlans = [vidQuery.id]
                     interface.validated_save()
                 except:
-                    self.log_debug(f"Could not Link vlan on {interface.name}")
+                    print(f"Could not Link vlan on {interface.name}")
                     continue
     def nautobotvlanimport(self, device, group):
         '''dumps them vlans into them groups and links it to the SVI created'''
@@ -142,7 +142,7 @@ class ImportDeviceVlans(Job):
                     device_id=device.id
                 )
             except:
-                self.log_debug(f'Interface: {interface} does not match SOT list - Skipping!')
+                print(f'Interface: {interface} does not match SOT list - Skipping!')
                 continue
             if len(vlan) == 1:
                 if interfaceQuery.mode == None:
@@ -157,7 +157,7 @@ class ImportDeviceVlans(Job):
                     interfaceQuery.validated_save()
             else:
                 '''If vlan dict value list is longer than 1'''
-                self.log_debug(f"setting int as tagged on {interfaceQuery.name}")
+                print(f"setting int as tagged on {interfaceQuery.name}")
                 interfaceQuery.mode='tagged'
                 interface.tagged_vlans=vlan
                 interfaceQuery.validated_save()
