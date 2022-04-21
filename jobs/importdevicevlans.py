@@ -63,7 +63,7 @@ class ImportDeviceVlans(Job):
         device_init.open()
         return device_init.get_vlans()
 
-    def _formatnapalmvlandict(self, group,vlans):
+    def _formatnapalmvlandict(self, device,group,vlans):
         '''Lil function that just reverses the dict that napalm gives you back.
         If the interface is a trunk it will return a list of vlans, if the interface was
         access, it just give you back that vlan.
@@ -74,12 +74,13 @@ class ImportDeviceVlans(Job):
         #find the group cause you'll need it later
         # Check that group exsists & create it if it dont
         #vlangroup = self.pynb.ipam.vlan_groups.get(name=str(group))
+        device = Device.objects.get(name=device)
         try:
             vlangroup = VLANGroup.objects.get(name=str(group))
         except:
                 vlangroup = VLANGroup(
                     name=str(group),
-                    site=self.device.site
+                    site_id=device.site.id
                 )
                 vlangroup.validated_save()
         if not isinstance(vlans, dict):
@@ -95,7 +96,7 @@ class ImportDeviceVlans(Job):
                     name=str(k),
                     vid=k,
                     group_id=str(vlangroup.id),
-                    site=self.device.site.id,
+                    site_id=device.site.id,
                     status='active',
                     #description=j.get(['name'], k)
                 )
@@ -127,7 +128,7 @@ class ImportDeviceVlans(Job):
         '''dumps them vlans into them groups and links it to the SVI created'''
         vlans = self._getvlans(device)
         # convert the Dict to something thats easier to use here
-        vlans_converted = self._formatnapalmvlandict(group, vlans)
+        vlans_converted = self._formatnapalmvlandict(device,group, vlans)
 
         for interface, vlan in vlans_converted.items():
             '''query interface object'''
