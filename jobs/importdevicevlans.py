@@ -159,7 +159,7 @@ class ImportDeviceVlans(Job):
                 '''If vlan dict value list is longer than 1'''
                 print(f"setting int as tagged on {interfaceQuery.name}")
                 interfaceQuery.mode='tagged'
-                interface.tagged_vlans=vlan
+                interfaceQuery.tagged_vlans=vlan
                 interfaceQuery.validated_save()
         '''Once VLANs are imported - Link SVIs using original dict from Napalm'''
         self._linkSVItoImportVlan(device,group)
