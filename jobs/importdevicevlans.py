@@ -150,16 +150,14 @@ class ImportDeviceVlans(Job):
                     update and link curent vlan to vlan we are
                     set the interface as access'''
                     self.log_debut(f'setting int as untagged on {interfaceQuery.name}')
-                    interfaceQuery(
-                        mode='access',
-                        untagged_vlan=vlan[0]
-                    )
+                    interfaceQuery.mode='access'
+                    interfaceQuery.untagged_vlan=vlan[0]
                     interfaceQuery.validated_save()
             else:
                 '''If vlan dict value list is longer than 1'''
                 print(f"setting int as tagged on {interfaceQuery.name}")
                 interfaceQuery.mode='tagged'
-                interfaceQuery.tagged_vlans=vlan
+                interfaceQuery.tagged_vlans.set(vlan)
                 interfaceQuery.validated_save()
         '''Once VLANs are imported - Link SVIs using original dict from Napalm'''
         self._linkSVItoImportVlan(device,group)
