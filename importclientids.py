@@ -5,6 +5,8 @@ import requests
 class ImportClientIDs(Job):
     def __init__(self):
         super().__init__()
+        self.data = None
+        self.commit = None
     def _fetchscpid(self,ip):
         if "/" in ip:
             ip = ip.split("/")[0]
@@ -28,7 +30,9 @@ class ImportClientIDs(Job):
                 ips._custom_field_data['clientid'] = "Client-Unknown"
                 ips.validated_save()
 
-    def run(self):
+    def run(self,data, commit):
+        self.data = data
+        self.commit = commit
         nbjob = ImportClientIDs()
         nbjob.clientIDPull()
 
