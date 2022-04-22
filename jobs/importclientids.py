@@ -35,8 +35,7 @@ class ImportClientIDs(Job):
     def run(self,data, commit):
         self.data = data
         self.commit = commit
-        nbjob = ImportClientIDs()
-        nbjob.clientIDPull()
+        self.clientIDPull()
 
 
 
