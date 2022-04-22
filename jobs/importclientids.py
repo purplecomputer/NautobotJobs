@@ -24,9 +24,11 @@ class ImportClientIDs(Job):
         for ips in all_ips:
             iplookup = self._fetchscpid(ips.host)
             if iplookup is not None:
+                self.log_info(f'Linking CID {iplookup} to IP {ips.host}')
                 ips._custom_field_data['clientid'] = iplookup
                 ips.validated_save()
             else:
+                self.log_info(f'No CID found for {ips.host}')
                 ips._custom_field_data['clientid'] = "Client-Unknown"
                 ips.validated_save()
 
