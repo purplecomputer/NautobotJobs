@@ -22,7 +22,7 @@ class ImportClientIDs(Job):
         #grab all IPs in IPAM
         all_ips = IPAddress.objects.all()
         for ips in all_ips:
-            iplookup = self._fetchscpid(ips)
+            iplookup = self._fetchscpid(ips.host)
             if iplookup is not None:
                 ips._custom_field_data['clientid'] = iplookup
                 ips.validated_save()
